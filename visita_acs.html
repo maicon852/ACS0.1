@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro de Visita - ACS</title>
+  <style>
+    body {
+      background-color: #121212;
+      font-family: Arial, sans-serif;
+      color: white;
+      padding: 20px;
+    }
+    h1 {
+      color: #4fc3f7;
+      text-align: center;
+    }
+    .form-section {
+      background-color: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 600px;
+      margin: auto;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      color: #bbdefb;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: none;
+      background-color: #263238;
+      color: white;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 10px;
+      background-color: #4fc3f7;
+      color: black;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #03a9f4;
+      cursor: pointer;
+    }
+    .accordion {
+      background-color: #263238;
+      color: #bbdefb;
+      cursor: pointer;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      text-align: left;
+      font-weight: bold;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      font-size: 16px;
+    }
+    .accordion span {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+    .panel {
+      padding: 10px 0;
+      display: none;
+      overflow: hidden;
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scaleY(0.9); }
+      to { opacity: 1; transform: scaleY(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Registro de Visita - Agente de Saúde</h1>
+
+  <div class="form-section">
+    <form id="form-visita">
+      <label>Endereço:</label>
+      <input type="text" name="endereco" required>
+
+      <label>Quantidade de indivíduos na casa:</label>
+      <input type="number" name="qtd_pessoas" id="qtd_pessoas" min="1" max="20" required>
+
+      <div id="individuos-container"></div>
+
+      <button type="submit">Salvar Localmente</button>
+      <button type="button" onclick="baixarCSV()">Baixar Lista de Pacientes</button>
+    </form>
+  </div>
+
+  <script>
+    const container = document.getElementById('individuos-container');
+    const qtdInput = document.getElementById('qtd_pessoas');
+    let pacientesSalvos = [];
+
+    function criarSelectIdade(name) {
+      const select = document.createElement('select');
+      select.name = name;
+      for (let i = 0; i <= 110; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i + ' anos';
+        select.appendChild(option);
+      }
+      return select;
+    }
+
+    qtdInput.addEventListener('input', () => {
+      container.innerHTML = '';
+      const qtd = parseInt(qtdInput.value);
+      if (!isNaN(qtd) && qtd > 0 && qtd <= 20) {
+        for (let i = 1; i <= qtd; i++) {
+          const acc = document.createElement('button');
+          acc.type = 'button';
+          acc.className = 'accordion';
+          acc.innerHTML = `<span>👤</span>Indivíduo ${i}`;
+
+          const panel = document.createElement('div');
+          panel.className = 'panel';
+
+          const nomeLabel = document.createElement('label');
+          nomeLabel.textContent = 'Nome:';
+          const nomeInput = document.createElement('input');
+          nomeInput.type = 'text';
+          nomeInput.name = `nome_${i}`;
+          panel.appendChild(nomeLabel);
+          panel.appendChild(nomeInput);
+
+          const idadeLabel = document.createElement('label');
+          idadeLabel.textContent = 'Idade:';
+          const idadeSelect = criarSelectIdade(`idade_${i}`);
+          panel.appendChild(idadeLabel);
+          panel.appendChild(idadeSelect);
+
+          panel.innerHTML += `
+            <label>Sexo:</label>
+            <select name="sexo_${i}">
+              <option value="masculino">Masculino</option>
+              <option value="feminino">Feminino</option>
+            </select>
+
+            <label>Comorbidade:</label>
+            <textarea name="comorbidade_${i}" rows="2"></textarea>
+
+            <label>Número do SUS:</label>
+            <input type="text" name="sus_${i}" required>
+
+            <label>CPF:</label>
+            <input type="text" name="cpf_${i}" required>
+          `;
+
+          acc.addEventListener('click', function () {
+            this.classList.toggle("active");
+            panel.style.display = panel.style.display === "block" ? "none" : "block";
+          });
+
+          container.appendChild(acc);
+          container.appendChild(panel);
+        }
+      }
+    });
+
+    document.getElementById('form-visita').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const data = {};
+      form.forEach((value, key) => {
+        data[key] = value;
+      });
+      pacientesSalvos.push(data);
+      alert("Dados salvos localmente!");
+      e.target.reset();
+      container.innerHTML = '';
+    });
+
+    function baixarCSV() {
+      if (pacientesSalvos.length === 0) {
+        alert("Nenhum dado salvo ainda.");
+        return;
+      }
+      const keys = Object.keys(pacientesSalvos[0]);
+      let csvContent = keys.join(",") + "\n";
+      pacientesSalvos.forEach(entry => {
+        const row = keys.map(k => `"${entry[k] || ''}"`).join(",");
+        csvContent += row + "\n";
+      });
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "lista_pacientes.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  </script>
+
+</body>
+</html>
